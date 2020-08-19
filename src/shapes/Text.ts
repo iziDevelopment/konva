@@ -2,6 +2,7 @@ import { Util, Collection } from '../Util';
 import { Factory } from '../Factory';
 import { Shape, ShapeConfig } from '../Shape';
 import { Konva } from '../Global';
+import { resolve, reorder } from 'unicode-bidirectional';
 import {
   getNumberValidator,
   getStringValidator,
@@ -108,6 +109,16 @@ function checkDefaultFill(config) {
     config.fill = config.fill || 'black';
   }
   return config;
+}
+
+function format(text) {
+    const codepoints = [];
+    for (let i = 0; i < text.length; i++) {
+        codepoints.push(text[i].charCodeAt());
+    }
+    const levels = resolve(codepoints, 0);
+    const reordering = reorder(codepoints, levels);
+    return String.fromCharCode(...reordering);
 }
 
 /**
@@ -260,26 +271,27 @@ export class Text extends Shape<TextConfig> {
         context.stroke();
         context.restore();
       }
-      if (letterSpacing !== 0 || align === JUSTIFY) {
-        //   var words = text.split(' ');
-        spacesNumber = text.split(' ').length - 1;
-        for (var li = 0; li < text.length; li++) {
-          var letter = text[li];
-          // skip justify for the last line
-          if (letter === ' ' && n !== textArrLen - 1 && align === JUSTIFY) {
-            lineTranslateX += (totalWidth - padding * 2 - width) / spacesNumber;
-            // context.translate(
-            //   Math.floor((totalWidth - padding * 2 - width) / spacesNumber),
-            //   0
-            // );
-          }
-          this._partialTextX = lineTranslateX;
-          this._partialTextY = translateY + lineTranslateY;
-          this._partialText = letter;
-          context.fillStrokeShape(this);
-          lineTranslateX += this.measureSize(letter).width + letterSpacing;
-        }
-      } else {
+        if (letterSpacing !== 0 || align === JUSTIFY) {
+          text = format(text);
+          //   var words = text.split(' ');
+            spacesNumber = text.split(' ').length - 1;
+            for (var li = 0; li < text.length; li++) {
+              var letter = text[li];
+              // skip justify for the last line
+                if (letter === ' ' && n !== textArrLen - 1 && align === JUSTIFY) {
+                  lineTranslateX += Math.floor((totalWidth - padding * 2 - width) / spacesNumber);
+                    // context.translate(
+                    //   Math.floor((totalWidth - padding * 2 - width) / spacesNumber),
+                    //   0
+                    // );
+                }
+                this._partialTextX = lineTranslateX;
+                this._partialTextY = translateY + lineTranslateY;
+                this._partialText = letter;
+                context.fillStrokeShape(this);
+                lineTranslateX += Math.round(this.measureSize(letter).width) + letterSpacing;
+            }
+        } else {
         this._partialTextX = lineTranslateX;
         this._partialTextY = translateY + lineTranslateY;
         this._partialText = text;
